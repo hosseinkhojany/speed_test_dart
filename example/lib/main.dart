@@ -13,7 +13,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   SpeedTestDart tester = SpeedTestDart();
-  Server? server;
+  List<Server> bestServersList = [];
 
   double downloadRate = 0;
   double uploadRate = 0;
@@ -22,34 +22,49 @@ class _MyAppState extends State<MyApp> {
   bool loadingDownload = false;
   bool loadingUpload = false;
 
-  Future<void> setServer() async {
+  Future<void> setBestServers() async {
     final settings = await tester.getSettings();
-
     final servers = settings.servers;
 
-    //Test latency for each server
-    for (var s in servers) {
-      try {
-        final latency = await tester.testServerLatency(s, 1);
-        print(latency);
-      } catch (e) {
-        print(e);
-      }
-    }
-    print('ok');
-    //Getting best server
-    servers.sort((a, b) => a.latency.compareTo(b.latency));
+    final _bestServersList = await tester.getBestServers(
+      servers: servers,
+    );
 
     setState(() {
-      server = servers.first;
+      bestServersList = _bestServersList;
       readyToTest = true;
+    });
+  }
+
+  Future<void> _testDownloadSpeed() async {
+    setState(() {
+      loadingDownload = true;
+    });
+    final _downloadRate =
+        await tester.testDownloadSpeed(servers: bestServersList);
+    setState(() {
+      downloadRate = _downloadRate;
+      loadingDownload = false;
+    });
+  }
+
+  Future<void> _testUploadSpeed() async {
+    setState(() {
+      loadingUpload = true;
+    });
+
+    final _uploadRate = await tester.testUploadSpeed(servers: bestServersList);
+
+    setState(() {
+      uploadRate = _uploadRate;
+      loadingUpload = false;
     });
   }
 
   @override
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setServer();
+      setBestServers();
     });
     super.initState();
   }
@@ -88,17 +103,9 @@ class _MyAppState extends State<MyApp> {
                 ),
                 child: const Text('Start'),
                 onPressed: () async {
-                  if (!readyToTest || server == null) return;
+                  if (!readyToTest || bestServersList.isEmpty) return;
 
-                  setState(() {
-                    loadingDownload = true;
-                  });
-                  final _downloadRate =
-                      await tester.testDownloadSpeed(server!, 2, 3);
-                  setState(() {
-                    downloadRate = _downloadRate;
-                    loadingDownload = false;
-                  });
+                  await _testDownloadSpeed();
                 },
               ),
               const SizedBox(
@@ -127,19 +134,8 @@ class _MyAppState extends State<MyApp> {
                 ),
                 child: const Text('Start'),
                 onPressed: () async {
-                  if (!readyToTest || server == null) return;
-
-                  setState(() {
-                    loadingUpload = true;
-                  });
-
-                  final _uploadRate =
-                      await tester.testUploadSpeed(server!, 2, 3);
-
-                  setState(() {
-                    uploadRate = _uploadRate;
-                    loadingUpload = false;
-                  });
+                  if (!readyToTest || bestServersList.isEmpty) return;
+                  await _testUploadSpeed();
                 },
               ),
             ],

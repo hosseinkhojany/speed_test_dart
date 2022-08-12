@@ -5,7 +5,6 @@ import 'dart:math';
 
 import 'package:http/http.dart' as http;
 import 'package:speed_test_dart/classes/classes.dart';
-
 import 'package:speed_test_dart/constants.dart';
 import 'package:sync/sync.dart';
 import 'package:xml_parser/xml_parser.dart';
@@ -45,30 +44,52 @@ class SpeedTestDart {
     return settings;
   }
 
-  /// Returns [double] ping value for [Server].
-  Future<double> testServerLatency(Server server, int retryCount) async {
-    final latencyUri = createTestUrl(server, 'latency.txt');
+  /// Returns a List[Server] with the best servers, ordered
+  /// by lowest to highest latency.
+  Future<List<Server>> getBestServers({
+    required List<Server> servers,
+    int retryCount = 2,
+    int timeoutInSeconds = 2,
+  }) async {
+    List<Server> serversToTest = [];
 
-    final stopwatch = Stopwatch();
-    for (var i = 0; i < retryCount; i++) {
-      String testString;
-      try {
+    for (final server in servers) {
+      final latencyUri = createTestUrl(server, 'latency.txt');
+      final stopwatch = Stopwatch();
+
+      for (var i = 0; i < retryCount; i++) {
+        String testString;
         stopwatch.start();
-        testString = (await http.get(latencyUri)).body;
-      } catch (ex) {
-        continue;
-      } finally {
-        stopwatch.stop();
+        try {
+          final response = await http.get(latencyUri).timeout(
+                Duration(
+                  seconds: timeoutInSeconds,
+                ),
+                onTimeout: (() => http.Response(
+                      '999999999',
+                      500,
+                    )),
+              );
+          testString = response.body;
+        } catch (_) {
+          continue;
+        } finally {
+          stopwatch.stop();
+        }
+
+        if (!testString.startsWith('test=test')) {
+          throw Exception(
+            'Server returned incorrect test string for latency.txt',
+          );
+        }
       }
 
-      if (!testString.startsWith('test=test')) {
-        throw Exception(
-          'Server returned incorrect test string for latency.txt',
-        );
-      }
+      final latency = stopwatch.elapsedMilliseconds / retryCount;
+      server.latency = latency;
+      serversToTest.add(server);
     }
-
-    return stopwatch.elapsedMilliseconds / retryCount;
+    serversToTest.sort((a, b) => a.latency.compareTo(b.latency));
+    return serversToTest;
   }
 
   /// Creates [Uri] from [Server] and [String] file
@@ -92,117 +113,83 @@ class SpeedTestDart {
         );
       }
     }
-    // downloadSizes.forEach((downloadSize) {
-    //   for (var i = 0; i < retryCount; i++) {
-    //     result.add(
-    //       downloadUriBase
-    //           .toString()
-    //           .replaceAll('%7B0%7D', downloadSize.toString())
-    //           .replaceAll('%7B1%7D', i.toString()),
-    //     );
-    //   }
-    // });
 
     return result;
   }
 
   /// Returns [double] downloaded speed in MB/s.
-  Future<double> testDownloadSpeed(
-    Server server,
-    int simultaneousDownloads,
-    int retryCount,
-  ) async {
-    final testData = generateDownloadUrls(server, retryCount);
+  Future<double> testDownloadSpeed({
+    required List<Server> servers,
+    int simultaneousDownloads = 2,
+    int retryCount = 3,
+  }) async {
+    double downloadSpeed = 0;
 
-    final semaphore = Semaphore(simultaneousDownloads);
+    // Iterates over all servers, if one request fails, the next one is tried.
+    for (final s in servers) {
+      final testData = generateDownloadUrls(s, retryCount);
+      final semaphore = Semaphore(simultaneousDownloads);
+      final tasks = <int>[];
+      final stopwatch = Stopwatch()..start();
 
-    final tasks = <Future<int>>[];
-    final stopwatch = Stopwatch()..start();
-
-    for (final td in testData) {
-      tasks.add(
-        Future<int>(() async {
+      try {
+        await Future.forEach(testData, (String td) async {
           await semaphore.acquire();
           try {
             final data = await http.get(Uri.parse(td));
-            return data.bodyBytes.length;
+            tasks.add(data.bodyBytes.length);
           } finally {
             semaphore.release();
           }
-        }),
-      );
+        });
+        stopwatch.stop();
+        final _totalSize = tasks.reduce((a, b) => a + b);
+        downloadSpeed = (_totalSize * 8 / 1024) /
+            (stopwatch.elapsedMilliseconds / 1000) /
+            1000;
+        break;
+      } catch (_) {
+        continue;
+      }
     }
-    // testData.forEach((element) {
-    //   tasks.add(
-    //     Future<int>(() async {
-    //       await semaphore.acquire();
-    //       try {
-    //         final data = await http.get(Uri.parse(element));
-    //         return data.bodyBytes.length;
-    //       } finally {
-    //         semaphore.release();
-    //       }
-    //     }),
-    //   );
-    // });
-
-    final results = await Future.wait(tasks);
-
-    stopwatch.stop();
-    final totalSize = results.reduce((a, b) => a + b);
-    return (totalSize * 8 / 1024) /
-        (stopwatch.elapsedMilliseconds / 1000) /
-        1000;
+    return downloadSpeed;
   }
 
   /// Returns [double] upload speed in MB/s.
-  Future<double> testUploadSpeed(
-    Server server,
-    int simultaneousDownloads,
-    int retryCount,
-  ) async {
-    final testData = generateUploadData(retryCount);
+  Future<double> testUploadSpeed({
+    required List<Server> servers,
+    int simultaneousUploads = 2,
+    int retryCount = 3,
+  }) async {
+    double uploadSpeed = 0;
+    for (var s in servers) {
+      final testData = generateUploadData(retryCount);
+      final semaphore = Semaphore(simultaneousUploads);
+      final stopwatch = Stopwatch()..start();
+      final tasks = <int>[];
 
-    final semaphore = Semaphore(simultaneousDownloads);
-
-    final tasks = <Future<int>>[];
-    final stopwatch = Stopwatch()..start();
-
-    for (final td in testData) {
-      tasks.add(
-        Future<int>(() async {
+      try {
+        await Future.forEach(testData, (String td) async {
           await semaphore.acquire();
           try {
-            // final data = await http.post(Uri.parse(server.url), body: td);
-            return td.length;
+            // do post request to measure time for upload
+            await http.post(Uri.parse(s.url), body: td);
+            tasks.add(td.length);
           } finally {
             semaphore.release();
           }
-        }),
-      );
+        });
+        stopwatch.stop();
+        final _totalSize = tasks.reduce((a, b) => a + b);
+        uploadSpeed = (_totalSize * 8 / 1024) /
+            (stopwatch.elapsedMilliseconds / 1000) /
+            1000;
+        break;
+      } catch (_) {
+        continue;
+      }
     }
-
-    // testData.forEach((element) {
-    //   tasks.add(
-    //     Future<int>(() async {
-    //       semaphore.acquire();
-    //       try {
-    //         final data = await http.post(Uri.parse(server.Url), body: element);
-    //         return element.length;
-    //       } finally {
-    //         semaphore.release();
-    //       }
-    //     }),
-    //   );
-    // });
-
-    final results = await Future.wait(tasks);
-
-    stopwatch.stop();
-    final totalSize = results.reduce((a, b) => a + b);
-    return (totalSize * 8 / 1024) /
-        (stopwatch.elapsedMilliseconds / 1000) /
-        1000;
+    return uploadSpeed;
   }
 
   /// Generate list of [String] urls for upload.

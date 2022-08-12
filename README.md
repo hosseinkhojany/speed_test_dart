@@ -6,7 +6,7 @@ Flutter package to test ping, upload, download using speedtest.net
 
 ## Optimizations
 
-Some refactors, more customization.
+Some refactors, more customization and better error handling. Now the test are done from a server list and if one server fails, it will try the next one.
 
 ## Installation
 
@@ -24,34 +24,32 @@ Projects using this library should use the stable channel of Flutter
 ## Example of usage
 
 ```dart
-    SpeedTest tester = SpeedTest();
+    // Create a tester instance
+    SpeedTestDart tester = SpeedTestDart();
 
-    //Getting closest servers
-    var settings = await tester.GetSettings();
+    // And a variable to store the best servers
+    List<Server> bestServersList = [];
 
-    var servers = settings.servers;
+    // Example function to set the best servers, could be called
+    // in an initState()
+    Future<void> setBestServers() async {
+      final settings = await tester.getSettings();
+      final servers = settings.servers;
 
-    //Test latency for each server
-    for (var server in servers) {
-      server.Latency = await tester.testServerLatency(server, 3);
+      final _bestServersList = await tester.getBestServers(
+        servers: servers,
+      );
+
+      setState(() {
+        bestServersList = _bestServersList;
+      });
     }
 
-    //Getting best server
-    servers.sort((a, b) => a.latency.compareTo(b.Latency));
-    var bestServer = servers.first;
-
     //Test download speed in MB/s
-    var downloadSpeed = await tester.testDownloadSpeed(
-        bestServer,
-        settings.download.threadsPerUrl == 0
-            ? 2
-            : settings.download.threadsPerUrl,
-        3);
+    final downloadRate =
+        await tester.testDownloadSpeed(servers: bestServersList);
 
     //Test upload speed in MB/s
-    var uploadSpeed = await tester.testUploadSpeed(
-        bestServer,
-        settings.upload.threadsPerUrl == 0 ? 2 : settings.upload.threadsPerUrl,
-        3);
+    final uploadRate = await tester.testUploadSpeed(servers: bestServersList);
 
 ```

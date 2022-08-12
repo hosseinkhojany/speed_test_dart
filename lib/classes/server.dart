@@ -62,8 +62,5 @@ class ServersList {
     for (final s in servers) {
       s.distance = clientCoordinate.getDistanceTo(s.geoCoordinate);
     }
-    // servers.forEach((element) {
-    //   element.distance = clientCoordinate.getDistanceTo(element.geoCoordinate);
-    // });
   }
 }
