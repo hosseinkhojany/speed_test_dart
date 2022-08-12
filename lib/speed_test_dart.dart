@@ -57,38 +57,30 @@ class SpeedTestDart {
       final latencyUri = createTestUrl(server, 'latency.txt');
       final stopwatch = Stopwatch();
 
-      for (var i = 0; i < retryCount; i++) {
-        String testString;
-        stopwatch.start();
-        try {
-          final response = await http.get(latencyUri).timeout(
-                Duration(
-                  seconds: timeoutInSeconds,
-                ),
-                onTimeout: (() => http.Response(
-                      '999999999',
-                      500,
-                    )),
-              );
-          testString = response.body;
-        } catch (_) {
-          continue;
-        } finally {
-          stopwatch.stop();
-        }
-
-        if (!testString.startsWith('test=test')) {
-          throw Exception(
-            'Server returned incorrect test string for latency.txt',
-          );
-        }
+      stopwatch.start();
+      try {
+        await http.get(latencyUri).timeout(
+              Duration(
+                seconds: timeoutInSeconds,
+              ),
+              onTimeout: (() => http.Response(
+                    '999999999',
+                    500,
+                  )),
+            );
+      } finally {
+        stopwatch.stop();
       }
 
       final latency = stopwatch.elapsedMilliseconds / retryCount;
-      server.latency = latency;
-      serversToTest.add(server);
+      if (latency < 500) {
+        server.latency = latency;
+        serversToTest.add(server);
+      }
     }
+
     serversToTest.sort((a, b) => a.latency.compareTo(b.latency));
+
     return serversToTest;
   }
 
