@@ -68,6 +68,9 @@ class SpeedTestDart {
                     500,
                   )),
             );
+        // If a server fails the request, continue in the iteration
+      } catch (_) {
+        continue;
       } finally {
         stopwatch.stop();
       }
