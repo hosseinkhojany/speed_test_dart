@@ -1,3 +1,7 @@
+## 1.0.4
+
+- Fixed minor typo on readme.
+
 ## 1.0.3
 
 - Added better example and docs with media.

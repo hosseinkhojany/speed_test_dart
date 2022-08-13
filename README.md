@@ -23,7 +23,7 @@ Projects using this library should use the stable channel of Flutter
 
 ### Startup
 
-At the startup of the app, we need to get the best servers to do the test (see `setBestServers` function). It's recommended to disabled the buttons while this operation is happening
+At the startup of the app, we need to get the best servers to do the test (see `setBestServers` function). It's recommended to disabled the buttons while this operation is happening:
 
 ![Startup](./media/startup.gif)
 
@@ -37,7 +37,7 @@ Doing download test:
 
 Doing upload test:
 
-![Upload test](./media/upload.png)
+![Upload test](./media/upload.gif)
 
 ## Example of usage
 
@@ -69,5 +69,4 @@ Doing upload test:
 
     //Test upload speed in MB/s
     final uploadRate = await tester.testUploadSpeed(servers: bestServersList);
-
 ```
