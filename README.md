@@ -21,6 +21,24 @@ Finally, run `dart pub get` to download the package.
 
 Projects using this library should use the stable channel of Flutter
 
+### Startup
+
+At the startup of the app, we need to get the best servers to do the test (see `setBestServers` function). It's recommended to disabled the buttons while this operation is happening
+
+![Startup](./media/startup.gif)
+
+### Download Speed
+
+Doing download test:
+
+![Download test](./media/download.gif)
+
+### Upload Speed
+
+Doing upload test:
+
+![Upload test](./media/upload.png)
+
 ## Example of usage
 
 ```dart

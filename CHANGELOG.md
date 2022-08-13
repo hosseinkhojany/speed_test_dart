@@ -1,3 +1,7 @@
+## 1.0.3
+
+- Added better example and docs with media.
+
 ## 1.0.2
 
 - Added continue keyword on request error while doing latency test.

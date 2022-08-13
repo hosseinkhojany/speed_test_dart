@@ -91,22 +91,31 @@ class _MyAppState extends State<MyApp> {
                 height: 10,
               ),
               if (loadingDownload)
-                const CircularProgressIndicator()
+                Column(
+                  children: const [
+                    CircularProgressIndicator(),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text('Testing download speed...'),
+                  ],
+                )
               else
                 Text('Download rate  ${downloadRate.toStringAsFixed(2)} Mb/s'),
-              const SizedBox(
-                height: 10,
-              ),
+              const SizedBox(height: 10),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  primary: readyToTest ? Colors.blue : Colors.grey,
+                  primary: readyToTest && !loadingDownload
+                      ? Colors.blue
+                      : Colors.grey,
                 ),
+                onPressed: loadingDownload
+                    ? null
+                    : () async {
+                        if (!readyToTest || bestServersList.isEmpty) return;
+                        await _testDownloadSpeed();
+                      },
                 child: const Text('Start'),
-                onPressed: () async {
-                  if (!readyToTest || bestServersList.isEmpty) return;
-
-                  await _testDownloadSpeed();
-                },
               ),
               const SizedBox(
                 height: 50,
@@ -122,7 +131,13 @@ class _MyAppState extends State<MyApp> {
                 height: 10,
               ),
               if (loadingUpload)
-                const CircularProgressIndicator()
+                Column(
+                  children: const [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 10),
+                    Text('Testing upload speed...'),
+                  ],
+                )
               else
                 Text('Upload rate ${uploadRate.toStringAsFixed(2)} Mb/s'),
               const SizedBox(
@@ -132,11 +147,13 @@ class _MyAppState extends State<MyApp> {
                 style: ElevatedButton.styleFrom(
                   primary: readyToTest ? Colors.blue : Colors.grey,
                 ),
+                onPressed: loadingUpload
+                    ? null
+                    : () async {
+                        if (!readyToTest || bestServersList.isEmpty) return;
+                        await _testUploadSpeed();
+                      },
                 child: const Text('Start'),
-                onPressed: () async {
-                  if (!readyToTest || bestServersList.isEmpty) return;
-                  await _testUploadSpeed();
-                },
               ),
             ],
           ),
