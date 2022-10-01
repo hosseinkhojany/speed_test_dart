@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:speed_test_dart/classes/classes.dart';
 import 'package:speed_test_dart/constants.dart';
+import 'package:speed_test_dart/enums/file_size.dart';
 import 'package:sync/sync.dart';
 import 'package:xml_parser/xml_parser.dart';
 
@@ -95,7 +96,11 @@ class SpeedTestDart {
   }
 
   /// Returns urls for download test.
-  List<String> generateDownloadUrls(Server server, int retryCount) {
+  List<String> generateDownloadUrls(
+    Server server,
+    int retryCount,
+    List<FileSize> downloadSizes,
+  ) {
     final downloadUriBase = createTestUrl(server, 'random{0}x{0}.jpg?r={1}');
     final result = <String>[];
     for (final ds in downloadSizes) {
@@ -103,12 +108,11 @@ class SpeedTestDart {
         result.add(
           downloadUriBase
               .toString()
-              .replaceAll('%7B0%7D', ds.toString())
+              .replaceAll('%7B0%7D', FILE_SIZE_MAPPING[ds].toString())
               .replaceAll('%7B1%7D', i.toString()),
         );
       }
     }
-
     return result;
   }
 
@@ -117,12 +121,13 @@ class SpeedTestDart {
     required List<Server> servers,
     int simultaneousDownloads = 2,
     int retryCount = 3,
+    List<FileSize> downloadSizes = defaultDownloadSizes,
   }) async {
     double downloadSpeed = 0;
 
     // Iterates over all servers, if one request fails, the next one is tried.
     for (final s in servers) {
-      final testData = generateDownloadUrls(s, retryCount);
+      final testData = generateDownloadUrls(s, retryCount, downloadSizes);
       final semaphore = Semaphore(simultaneousDownloads);
       final tasks = <int>[];
       final stopwatch = Stopwatch()..start();
