@@ -1,6 +1,6 @@
 name: speed_test_dart
 description: Internet speed tester (ping, upload, download) using speedtest.net
-version: 1.0.4
+version: 1.0.4+1
 homepage: https://github.com/jorger5/speed_test_dart
 repository: https://github.com/jorger5/speed_test_dart
 

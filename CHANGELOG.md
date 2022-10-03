@@ -1,3 +1,7 @@
+## 1.0.4+1
+
+- Added [FileSize] enum to select test file sizes for speed tests.
+
 ## 1.0.4
 
 - Fixed minor typo on readme.
