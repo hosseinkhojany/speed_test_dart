@@ -1,5 +1,5 @@
 import 'package:speed_test_dart/classes/classes.dart';
-import 'package:xml_parser/xml_parser.dart';
+import 'package:xml/xml.dart';
 
 class Server {
   Server(
@@ -51,8 +51,12 @@ class ServersList {
   );
 
   ServersList.fromXMLElement(XmlElement? element)
-      : servers = element!.getElement('servers')!.children!.map((element) {
-          final server = Server.fromXMLElement(element as XmlElement);
+      : servers = element!
+            .getElement('servers')!
+            .children
+            .whereType<XmlElement>()
+            .map((element) {
+          final server = Server.fromXMLElement(element);
           return server;
         });
 

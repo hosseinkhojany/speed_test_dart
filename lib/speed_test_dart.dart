@@ -8,7 +8,7 @@ import 'package:speed_test_dart/classes/classes.dart';
 import 'package:speed_test_dart/constants.dart';
 import 'package:speed_test_dart/enums/file_size.dart';
 import 'package:sync/sync.dart';
-import 'package:xml_parser/xml_parser.dart';
+import 'package:xml/xml.dart';
 
 /// A Speed tester.
 class SpeedTestDart {
@@ -16,7 +16,7 @@ class SpeedTestDart {
   Future<Settings> getSettings() async {
     final response = await http.get(Uri.parse(configUrl));
     final settings = Settings.fromXMLElement(
-      XmlDocument.from(response.body)?.getElement('settings'),
+      XmlDocument.parse(response.body).getElement('settings'),
     );
 
     var serversConfig = ServersList(<Server>[]);
@@ -26,7 +26,7 @@ class SpeedTestDart {
         final resp = await http.get(Uri.parse(element));
 
         serversConfig = ServersList.fromXMLElement(
-          XmlDocument.from(resp.body)?.getElement('settings'),
+          XmlDocument.parse(resp.body).getElement('settings'),
         );
       } catch (ex) {
         serversConfig = ServersList(<Server>[]);
