@@ -38,7 +38,7 @@ class SpeedTestDart {
     settings.servers = serversConfig.servers
         .where(
           (s) => !ignoredIds.contains(s.id.toString()),
-        )
+    )
         .toList();
     settings.servers.sort((a, b) => a.distance.compareTo(b.distance));
 
@@ -61,14 +61,14 @@ class SpeedTestDart {
       stopwatch.start();
       try {
         await http.get(latencyUri).timeout(
-              Duration(
-                seconds: timeoutInSeconds,
-              ),
-              onTimeout: (() => http.Response(
-                    '999999999',
-                    500,
-                  )),
-            );
+          Duration(
+            seconds: timeoutInSeconds,
+          ),
+          onTimeout: (() => http.Response(
+            '999999999',
+            500,
+          )),
+        );
         // If a server fails the request, continue in the iteration
       } catch (_) {
         continue;
@@ -97,10 +97,10 @@ class SpeedTestDart {
 
   /// Returns urls for download test.
   List<String> generateDownloadUrls(
-    Server server,
-    int retryCount,
-    List<FileSize> downloadSizes,
-  ) {
+      Server server,
+      int retryCount,
+      List<FileSize> downloadSizes,
+      ) {
     final downloadUriBase = createTestUrl(server, 'random{0}x{0}.jpg?r={1}');
     final result = <String>[];
     for (final ds in downloadSizes) {
@@ -121,6 +121,7 @@ class SpeedTestDart {
     required List<Server> servers,
     int simultaneousDownloads = 2,
     int retryCount = 3,
+    required Function(double) onProgress,
     List<FileSize> downloadSizes = defaultDownloadSizes,
   }) async {
     double downloadSpeed = 0;
@@ -138,6 +139,11 @@ class SpeedTestDart {
           try {
             final data = await http.get(Uri.parse(td));
             tasks.add(data.bodyBytes.length);
+            final _totalSize = tasks.reduce((a, b) => a + b);
+            downloadSpeed = (_totalSize * 8 / 1024) /
+                (stopwatch.elapsedMilliseconds / 1000) /
+                1000;
+            onProgress.call(downloadSpeed);
           } finally {
             semaphore.release();
           }
@@ -158,6 +164,7 @@ class SpeedTestDart {
   /// Returns [double] upload speed in MB/s.
   Future<double> testUploadSpeed({
     required List<Server> servers,
+    required Function(double) onProgress,
     int simultaneousUploads = 2,
     int retryCount = 3,
   }) async {
@@ -175,6 +182,11 @@ class SpeedTestDart {
             // do post request to measure time for upload
             await http.post(Uri.parse(s.url), body: td);
             tasks.add(td.length);
+            final _totalSize = tasks.reduce((a, b) => a + b);
+            uploadSpeed = (_totalSize * 8 / 1024) /
+                (stopwatch.elapsedMilliseconds / 1000) /
+                1000;
+            onProgress.call(uploadSpeed);
           } finally {
             semaphore.release();
           }
